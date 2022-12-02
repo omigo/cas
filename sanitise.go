@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	urlCleanParameters = []string{"gateway", "renew", "service", "ticket"}
+	urlCleanParameters = []string{"gateway", "renew", "service", "ticket", "__cas_server_host__"}
 )
 
 // sanitisedURL cleans a URL of CAS specific parameters
