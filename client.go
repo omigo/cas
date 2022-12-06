@@ -11,21 +11,24 @@ import (
 
 // Options : Client configuration options
 type Options struct {
-	URL          *url.URL     // URL to the CAS service
-	Store        TicketStore  // Custom TicketStore, if nil a MemoryStore will be used
-	Client       *http.Client // Custom http client to allow options for http connections
-	SendService  bool         // Custom sendService to determine whether you need to send service param
-	URLScheme    URLScheme    // Custom url scheme, can be used to modify the request urls for the client
-	Cookie       *http.Cookie // http.Cookie options, uses Path, Domain, MaxAge, HttpOnly, & Secure
-	SessionStore SessionStore
+	URL           *url.URL     // URL to the CAS service
+	PageURL       *url.URL     // URL to the CAS service
+	Store         TicketStore  // Custom TicketStore, if nil a MemoryStore will be used
+	Client        *http.Client // Custom http client to allow options for http connections
+	SendService   bool         // Custom sendService to determine whether you need to send service param
+	URLScheme     URLScheme    // Custom url scheme, can be used to modify the request urls for the client
+	PageURLScheme URLScheme    // Custom url scheme, can be used to modify the request urls for the client
+	Cookie        *http.Cookie // http.Cookie options, uses Path, Domain, MaxAge, HttpOnly, & Secure
+	SessionStore  SessionStore
 }
 
 // Client implements the main protocol
 type Client struct {
-	tickets   TicketStore
-	client    *http.Client
-	urlScheme URLScheme
-	cookie    *http.Cookie
+	tickets       TicketStore
+	client        *http.Client
+	urlScheme     URLScheme
+	pageUrlScheme URLScheme
+	cookie        *http.Cookie
 
 	sessions    SessionStore
 	sendService bool
@@ -60,6 +63,13 @@ func NewClient(options *Options) *Client {
 		urlScheme = NewDefaultURLScheme(options.URL)
 	}
 
+	var pageURLScheme URLScheme
+	if options.PageURLScheme != nil {
+		pageURLScheme = options.PageURLScheme
+	} else {
+		pageURLScheme = NewDefaultURLScheme(options.PageURL)
+	}
+
 	var client *http.Client
 	if options.Client != nil {
 		client = options.Client
@@ -80,13 +90,14 @@ func NewClient(options *Options) *Client {
 	}
 
 	return &Client{
-		tickets:     tickets,
-		client:      client,
-		urlScheme:   urlScheme,
-		cookie:      cookie,
-		sessions:    sessions,
-		sendService: options.SendService,
-		stValidator: NewServiceTicketValidator(client, options.URL),
+		tickets:       tickets,
+		client:        client,
+		urlScheme:     urlScheme,
+		pageUrlScheme: pageURLScheme,
+		cookie:        cookie,
+		sessions:      sessions,
+		sendService:   options.SendService,
+		stValidator:   NewServiceTicketValidator(client, options.URL),
 	}
 }
 
@@ -127,7 +138,7 @@ func requestURL(r *http.Request) (*url.URL, error) {
 
 // LoginUrlForRequest determines the CAS login URL for the http.Request.
 func (c *Client) LoginUrlForRequest(r *http.Request) (string, error) {
-	u, err := c.urlScheme.Login()
+	u, err := c.pageUrlScheme.Login()
 	if err != nil {
 		return "", err
 	}
@@ -146,7 +157,7 @@ func (c *Client) LoginUrlForRequest(r *http.Request) (string, error) {
 
 // LogoutUrlForRequest determines the CAS logout URL for the http.Request.
 func (c *Client) LogoutUrlForRequest(r *http.Request) (string, error) {
-	u, err := c.urlScheme.Logout()
+	u, err := c.pageUrlScheme.Logout()
 	if err != nil {
 		return "", err
 	}
